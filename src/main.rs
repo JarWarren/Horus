@@ -1,3 +1,6 @@
+use std::env::args;
+use std::fs::read_to_string;
+
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -57,6 +60,67 @@ async fn run() {
     };
     surface.configure(&device, &config);
 
+    // vertex shader
+    let vertex_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("Vertex Shader"),
+        source: wgpu::ShaderSource::Wgsl(include_str!("vertex.wgsl").into()),
+    });
+
+    // fragment shader
+    let mut fragment_path = "./src/fragment.wgsl".to_string();
+    if args().len() > 2 {
+        fragment_path = args().nth(1).unwrap();
+    }
+    let fragment_source = read_to_string(&fragment_path).unwrap();
+    let fragment_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("Fragment Shader"),
+        source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&fragment_source)),
+    });
+
+    // determines which resources are bound to the pipeline
+    let render_pipeline_layout =
+        device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Render Pipeline Layout"),
+            bind_group_layouts: &[],
+            push_constant_ranges: &[],
+        });
+
+    // represents all stages of the rendering process
+    let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("Render Pipeline"),
+        layout: Some(&render_pipeline_layout),
+        vertex: wgpu::VertexState {
+            module: &vertex_shader,
+            entry_point: "vs_main",
+            buffers: &[],
+        },
+        fragment: Some(wgpu::FragmentState {
+            module: &fragment_shader,
+            entry_point: "fs_main",
+            targets: &[Some(wgpu::ColorTargetState {
+                format: config.format,
+                blend: Some(wgpu::BlendState::REPLACE),
+                write_mask: wgpu::ColorWrites::ALL,
+            })],
+        }),
+        primitive: wgpu::PrimitiveState {
+            topology: wgpu::PrimitiveTopology::TriangleList,
+            strip_index_format: None,
+            front_face: wgpu::FrontFace::Ccw,
+            cull_mode: Some(wgpu::Face::Back),
+            polygon_mode: wgpu::PolygonMode::Fill,
+            unclipped_depth: false,
+            conservative: false,
+        },
+        depth_stencil: None,
+        multisample: wgpu::MultisampleState {
+            count: 1,
+            mask: !0,
+            alpha_to_coverage_enabled: false,
+        },
+        multiview: None,
+    });
+
     // continuously poll window events from the system
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -87,7 +151,7 @@ async fn run() {
                 }
             }
             Event::RedrawRequested(window_id) if window_id == window.id() => {
-                match render(&device, &mut surface, &queue) {
+                match render(&device, &surface, &queue, &render_pipeline) {
                     Ok(_) => {}
                     // Reconfigure the surface if it's lost or outdated
                     Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => resize(&device, &mut surface, &mut config, size),
@@ -110,7 +174,7 @@ fn resize(device: &wgpu::Device, surface: &mut wgpu::Surface, config: &mut wgpu:
     }
 }
 
-fn render(device: &wgpu::Device, surface: &mut wgpu::Surface, queue: &wgpu::Queue) -> Result<(), wgpu::SurfaceError> {
+fn render(device: &wgpu::Device, surface: &wgpu::Surface, queue: &wgpu::Queue, pipeline: &wgpu::RenderPipeline) -> Result<(), wgpu::SurfaceError> {
     // get a SurfaceTexture to render to
     let output = surface.get_current_texture()?;
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -121,18 +185,24 @@ fn render(device: &wgpu::Device, surface: &mut wgpu::Surface, queue: &wgpu::Queu
     });
 
     {
-        let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &view,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                    store: true,
-                },
-            })],
+            color_attachments: &[
+                // This is what @location(0) in the fragment shader targets
+                Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                        store: true,
+                    },
+                })
+            ],
             depth_stencil_attachment: None,
         });
+
+        render_pass.set_pipeline(&pipeline);
+        render_pass.draw(0..3, 0..1);
     }
 
     // submit will accept anything that implements IntoIter
