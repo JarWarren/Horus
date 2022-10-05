@@ -3,6 +3,8 @@ use std::{
     fs::read_to_string,
     time::Instant,
 };
+use std::fs::File;
+use std::io::Write;
 
 use wgpu::{
     Backends, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor, BindGroupLayoutEntry,
@@ -28,6 +30,28 @@ struct Uniforms {
     time: f32,
     padding: f32,
 }
+
+const VERTEX_SOURCE: &str = "\
+struct VertexInput {
+    @builtin(vertex_index) vertex_index: u32,
+};
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) coord: vec2<f32>,
+};
+@vertex
+fn vs_main(in: VertexInput) -> VertexOutput {
+    var vertices = array<vec2<f32>, 3>(
+        vec2<f32>(-1., 1.),
+        vec2<f32>(3.0, 1.),
+        vec2<f32>(-1., -3.0),
+    );
+    var out: VertexOutput;
+    out.coord = vertices[in.vertex_index];
+    out.position = vec4<f32>(out.coord, 0.0, 1.0);
+    return out;
+}\
+";
 
 const FRAGMENT_SOURCE: &str = "\
 struct VertexOutput {
@@ -55,6 +79,23 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 ";
 
 fn main() {
+    if args().len() > 1 && args().nth(1).unwrap().contains("-c") {
+        let mut name = args()
+            .nth(2)
+            .unwrap_or("fragment".to_string());
+        name.push_str(".wgsl");
+
+        println!("[Horus] Created {}", name);
+        let mut file = File::create(name)
+        .expect("Unable to create a new shader file.");
+
+        file.write_all(FRAGMENT_SOURCE.as_ref())
+        .expect("Unable to write to new shader.");
+
+        return;
+    } else if args().len() <= 1 {
+        println!("[Horus] Use \"-- -c filename\" to create a new shader\n[Horus] Pass in an existing shader to run it");
+    }
     pollster::block_on(run());
 }
 
@@ -110,18 +151,19 @@ async fn run() {
     // vertex shader
     let vertex_shader = device.create_shader_module(ShaderModuleDescriptor {
         label: None,
-        source: ShaderSource::Wgsl(include_str!("vertex.wgsl").into()),
+        source: ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&VERTEX_SOURCE)),
     });
 
     // fragment shader
-    let mut fragment = FRAGMENT_SOURCE.to_string();
+    let mut fragment_source = FRAGMENT_SOURCE.to_string();
     if args().len() > 1 {
         let fragment_path = args().nth(1).unwrap();
-        fragment = read_to_string(&fragment_path).unwrap();
+        println!("[Horus] Running {}", fragment_path);
+        fragment_source = read_to_string(&fragment_path).unwrap();
     }
     let fragment_shader = device.create_shader_module(ShaderModuleDescriptor {
         label: None,
-        source: ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&fragment)),
+        source: ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&fragment_source)),
     });
 
     // uniform data to be sent to the shaders
