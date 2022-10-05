@@ -29,6 +29,31 @@ struct Uniforms {
     padding: f32,
 }
 
+const FRAGMENT_SOURCE: &str = "\
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) coord: vec2<f32>,
+};
+
+// Horus uses the same uniforms as thebookofshaders.com and shadertoy.com
+struct Uniforms {
+    mouse: vec2<f32>, // pixel mouse coords
+    resolution: vec2<f32>, // pixel resolution
+    time: f32, // time since program start
+};
+
+@group(0) @binding(0)
+var<uniform> uniforms: Uniforms;
+
+@fragment
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    // This is the same shader from thebookofshaders.com/03
+    // Keep in mind that because this is WGSL, the Y axis is flipped vs GLSL
+    let normalized = in.position.xy / uniforms.resolution;
+    return vec4<f32>(normalized.rg, 0., 1.0);
+}\
+";
+
 fn main() {
     pollster::block_on(run());
 }
@@ -89,14 +114,14 @@ async fn run() {
     });
 
     // fragment shader
-    let mut fragment_path = "./src/fragment.wgsl".to_string();
+    let mut fragment = FRAGMENT_SOURCE.to_string();
     if args().len() > 1 {
-        fragment_path = args().nth(1).unwrap();
+        let fragment_path = args().nth(1).unwrap();
+        fragment = read_to_string(&fragment_path).unwrap();
     }
-    let fragment_source = read_to_string(&fragment_path).unwrap();
     let fragment_shader = device.create_shader_module(ShaderModuleDescriptor {
         label: None,
-        source: ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&fragment_source)),
+        source: ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&fragment)),
     });
 
     // uniform data to be sent to the shaders
