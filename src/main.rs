@@ -69,7 +69,7 @@ async fn run() {
             limits: Limits::default(),
             label: None,
         },
-        None, // Trace path
+        None,
     ).await.unwrap();
 
     // configure the surface
@@ -84,7 +84,7 @@ async fn run() {
 
     // vertex shader
     let vertex_shader = device.create_shader_module(ShaderModuleDescriptor {
-        label: Some("Vertex Shader"),
+        label: None,
         source: ShaderSource::Wgsl(include_str!("vertex.wgsl").into()),
     });
 
@@ -93,10 +93,9 @@ async fn run() {
     if args().len() > 1 {
         fragment_path = args().nth(1).unwrap();
     }
-    println!("running {fragment_path}");
     let fragment_source = read_to_string(&fragment_path).unwrap();
     let fragment_shader = device.create_shader_module(ShaderModuleDescriptor {
-        label: Some("Fragment Shader"),
+        label: None,
         source: ShaderSource::Wgsl(std::borrow::Cow::Borrowed(&fragment_source)),
     });
 
@@ -108,7 +107,6 @@ async fn run() {
         contents: bytemuck::bytes_of(&uniforms),
         usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
     });
-
     let uniforms_buffer_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
         label: None,
         entries: &[BindGroupLayoutEntry {
@@ -122,7 +120,6 @@ async fn run() {
             },
         }],
     });
-
     let uniforms_buffer_bind_group = device.create_bind_group(&BindGroupDescriptor {
         label: None,
         layout: &uniforms_buffer_layout,
@@ -135,14 +132,14 @@ async fn run() {
     // determines which resources are bound to the pipeline
     let render_pipeline_layout =
         device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[&uniforms_buffer_layout],
+            label: None,
+            bind_group_layouts: &[&uniforms_buffer_layout], // just our uniforms
             push_constant_ranges: &[],
         });
 
     // represents all stages of the rendering process
     let render_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
-        label: Some("Render Pipeline"),
+        label: None,
         layout: Some(&render_pipeline_layout),
         vertex: VertexState {
             module: &vertex_shader,
@@ -187,6 +184,7 @@ async fn run() {
                         resize(&device, &mut surface, &mut config, **new_inner_size, &mut uniforms);
                     }
                     WindowEvent::CursorMoved { position, .. } => {
+                        // update uniforms
                         uniforms.mouse = [position.x as _, position.y as _];
                     }
                     _ => {}
@@ -202,13 +200,11 @@ async fn run() {
                 queue.write_buffer(&uniforms_buffer, 0, bytemuck::bytes_of(&uniforms));
 
                 // the encoder will create a command buffer to send to the device
-                let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor {
-                    label: Some("Render Encoder"),
-                });
+                let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: None });
 
                 {
                     let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
-                        label: Some("Render Pass"),
+                        label: None,
                         color_attachments: &[Some(RenderPassColorAttachment {
                             view: &view,
                             resolve_target: None,
@@ -224,6 +220,7 @@ async fn run() {
                     render_pass.draw(0..3, 0..1);
                 }
 
+                // send it to the device for rendering
                 queue.submit(std::iter::once(encoder.finish()));
                 output.present();
             }
@@ -232,6 +229,7 @@ async fn run() {
     });
 }
 
+// update uniforms, config and then resize surface to fit the window
 fn resize(device: &Device, surface: &mut Surface, config: &mut SurfaceConfiguration, new_size: winit::dpi::PhysicalSize<u32>, uniforms: &mut Uniforms) {
     if new_size.width > 0 && new_size.height > 0 {
         config.width = new_size.width;
