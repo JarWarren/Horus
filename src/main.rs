@@ -1,13 +1,18 @@
-use std::env::args;
-use std::fs::read_to_string;
-use std::time::Instant;
+use std::{
+    env::args,
+    fs::read_to_string,
+    time::Instant,
+};
 
 use wgpu::{
-    Backends, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType, BlendState, BufferBindingType,
-    BufferUsages, Color, ColorTargetState, ColorWrites, CommandEncoderDescriptor, Device, DeviceDescriptor, Face, Features,
-    FragmentState, FrontFace, Instance, Limits, LoadOp, MultisampleState, Operations, PipelineLayoutDescriptor, PolygonMode, PowerPreference, PresentMode,
-    PrimitiveState, PrimitiveTopology, RenderPassColorAttachment, RenderPassDescriptor, RenderPipelineDescriptor, RequestAdapterOptions, ShaderModuleDescriptor,
-    ShaderSource, ShaderStages, Surface, SurfaceConfiguration, TextureUsages, TextureViewDescriptor, util::{BufferInitDescriptor, DeviceExt}, VertexState,
+    Backends, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor, BindGroupLayoutEntry,
+    BindingType, BufferBindingType, BufferUsages, Color, CommandEncoderDescriptor, Device,
+    DeviceDescriptor, Features, FragmentState, Instance, Limits, LoadOp, MultisampleState,
+    Operations, PipelineLayoutDescriptor, PowerPreference, PresentMode, PrimitiveState,
+    RenderPassColorAttachment, RenderPassDescriptor, RenderPipelineDescriptor,
+    RequestAdapterOptions, ShaderModuleDescriptor, ShaderSource, ShaderStages, Surface,
+    SurfaceConfiguration, TextureUsages, TextureViewDescriptor,
+    util::{BufferInitDescriptor, DeviceExt}, VertexState,
 };
 use winit::{
     event::*,
@@ -21,6 +26,7 @@ struct Uniforms {
     mouse: [f32; 2],
     resolution: [f32; 2],
     time: f32,
+    padding: f32,
 }
 
 fn main() {
@@ -84,9 +90,10 @@ async fn run() {
 
     // fragment shader
     let mut fragment_path = "./src/fragment.wgsl".to_string();
-    if args().len() > 2 {
+    if args().len() > 1 {
         fragment_path = args().nth(1).unwrap();
     }
+    println!("running {fragment_path}");
     let fragment_source = read_to_string(&fragment_path).unwrap();
     let fragment_shader = device.create_shader_module(ShaderModuleDescriptor {
         label: Some("Fragment Shader"),
@@ -94,7 +101,7 @@ async fn run() {
     });
 
     // uniform data to be sent to the shaders
-    let mut uniforms = Uniforms { mouse: [0., 0.], resolution: [size.width as _, size.height as _], time: 0. };
+    let mut uniforms = Uniforms { mouse: [0., 0.], resolution: [size.width as _, size.height as _], time: 0., padding: 0. };
     let time = Instant::now();
     let uniforms_buffer = device.create_buffer_init(&BufferInitDescriptor {
         label: None,
@@ -145,11 +152,7 @@ async fn run() {
         fragment: Some(FragmentState {
             module: &fragment_shader,
             entry_point: "fs_main",
-            targets: &[Some(ColorTargetState {
-                format: config.format,
-                blend: Some(BlendState::REPLACE),
-                write_mask: ColorWrites::ALL,
-            })],
+            targets: &[Some(config.format.into())],
         }),
         primitive: PrimitiveState::default(),
         depth_stencil: None,
@@ -205,7 +208,7 @@ async fn run() {
 
                 {
                     let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
-                        label: None,
+                        label: Some("Render Pass"),
                         color_attachments: &[Some(RenderPassColorAttachment {
                             view: &view,
                             resolve_target: None,
@@ -237,41 +240,3 @@ fn resize(device: &Device, surface: &mut Surface, config: &mut SurfaceConfigurat
         surface.configure(device, config);
     }
 }
-
-// fn render(device: &Device, surface: &Surface, queue: &Queue, pipeline: &RenderPipeline) -> Result<(), SurfaceError> {
-//     // get a SurfaceTexture to render to
-//     let output = surface.get_current_texture()?;
-//     let view = output.texture.create_view(&TextureViewDescriptor::default());
-//
-//     // the encoder will create a command buffer to send to the device
-//     let mut encoder = device.create_command_encoder(&CommandEncoderDescriptor {
-//         label: Some("Render Encoder"),
-//     });
-//
-//     {
-//         let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
-//             label: Some("Render Pass"),
-//             color_attachments: &[
-//                 // This is what @location(0) in the fragment shader targets
-//                 Some(RenderPassColorAttachment {
-//                     view: &view,
-//                     resolve_target: None,
-//                     ops: Operations {
-//                         load: LoadOp::Clear(Color::BLACK),
-//                         store: true,
-//                     },
-//                 })
-//             ],
-//             depth_stencil_attachment: None,
-//         });
-//
-//         render_pass.set_pipeline(&pipeline);
-//         render_pass.draw(0..3, 0..1);
-//     }
-//
-//     // submit will accept anything that implements IntoIter
-//     queue.submit(std::iter::once(encoder.finish()));
-//     output.present();
-//
-//     Ok(())
-// }
