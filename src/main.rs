@@ -94,7 +94,7 @@ fn main() {
 
         return;
     } else if args().len() <= 1 {
-        println!("[Horus] Use \"-- -c filename\" to create a new shader\n[Horus] Pass in an existing shader to run it");
+        println!("[Horus] Use \"-c filename\" to create a new shader\n[Horus] Pass in an existing shader to run it");
     }
     pollster::block_on(run());
 }
