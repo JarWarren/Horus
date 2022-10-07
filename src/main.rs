@@ -6,16 +6,7 @@ use std::{
 use std::fs::File;
 use std::io::Write;
 
-use wgpu::{
-    Backends, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor, BindGroupLayoutEntry,
-    BindingType, BufferBindingType, BufferUsages, Color, CommandEncoderDescriptor, Device,
-    DeviceDescriptor, Features, FragmentState, Instance, Limits, LoadOp, MultisampleState,
-    Operations, PipelineLayoutDescriptor, PowerPreference, PresentMode, PrimitiveState,
-    RenderPassColorAttachment, RenderPassDescriptor, RenderPipelineDescriptor,
-    RequestAdapterOptions, ShaderModuleDescriptor, ShaderSource, ShaderStages, Surface,
-    SurfaceConfiguration, TextureUsages, TextureViewDescriptor,
-    util::{BufferInitDescriptor, DeviceExt}, VertexState,
-};
+use wgpu::{Backends, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType, BufferBindingType, BufferUsages, Color, CommandEncoderDescriptor, CompositeAlphaMode, Device, DeviceDescriptor, Features, FragmentState, Instance, Limits, LoadOp, MultisampleState, Operations, PipelineLayoutDescriptor, PowerPreference, PresentMode, PrimitiveState, RenderPassColorAttachment, RenderPassDescriptor, RenderPipelineDescriptor, RequestAdapterOptions, ShaderModuleDescriptor, ShaderSource, ShaderStages, Surface, SurfaceConfiguration, TextureUsages, TextureViewDescriptor, util::{BufferInitDescriptor, DeviceExt}, VertexState};
 use winit::{
     event::*,
     event_loop,
@@ -80,17 +71,13 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
 fn main() {
     if args().len() > 1 && args().nth(1).unwrap().contains("-c") {
-        let mut name = args()
-            .nth(2)
-            .unwrap_or("fragment".to_string());
+        let mut name = args().nth(2).unwrap_or("fragment".to_string());
         name.push_str(".wgsl");
 
         println!("[Horus] Created {}", name);
-        let mut file = File::create(name)
-        .expect("Unable to create a new shader file.");
+        let mut file = File::create(name).expect("Unable to create a new shader file.");
 
-        file.write_all(FRAGMENT_SOURCE.as_ref())
-        .expect("Unable to write to new shader.");
+        file.write_all(FRAGMENT_SOURCE.as_ref()).expect("Unable to write to new shader.");
 
         return;
     } else if args().len() <= 1 {
@@ -106,10 +93,7 @@ async fn run() {
     let event_loop = event_loop::EventLoop::new();
 
     // register a new window within the context
-    let window = WindowBuilder::new()
-        .with_title("Horus")
-        .build(&event_loop)
-        .unwrap();
+    let window = WindowBuilder::new().with_title("Horus").build(&event_loop).unwrap();
     let size = window.inner_size();
 
     // wgpu
@@ -145,6 +129,7 @@ async fn run() {
         width: size.width,
         height: size.height,
         present_mode: PresentMode::Fifo, // basically vsync
+        alpha_mode: CompositeAlphaMode::Auto,
     };
     surface.configure(&device, &config);
 
@@ -197,12 +182,11 @@ async fn run() {
     });
 
     // determines which resources are bound to the pipeline
-    let render_pipeline_layout =
-        device.create_pipeline_layout(&PipelineLayoutDescriptor {
-            label: None,
-            bind_group_layouts: &[&uniforms_buffer_layout], // just our uniforms
-            push_constant_ranges: &[],
-        });
+    let render_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+        label: None,
+        bind_group_layouts: &[&uniforms_buffer_layout], // just our uniforms
+        push_constant_ranges: &[],
+    });
 
     // represents all stages of the rendering process
     let render_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
@@ -234,10 +218,8 @@ async fn run() {
                 window_id,
             } if window_id == window.id() => {
                 match event {
-                    WindowEvent::CloseRequested
-                    | WindowEvent::KeyboardInput {
-                        input:
-                        KeyboardInput {
+                    WindowEvent::CloseRequested | WindowEvent::KeyboardInput {
+                        input: KeyboardInput {
                             state: ElementState::Pressed,
                             virtual_keycode: Some(VirtualKeyCode::Escape),
                             ..
