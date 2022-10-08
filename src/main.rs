@@ -93,7 +93,10 @@ async fn run() {
     let event_loop = event_loop::EventLoop::new();
 
     // register a new window within the context
-    let window = WindowBuilder::new().with_title("Horus").build(&event_loop).unwrap();
+    let window = WindowBuilder::new()
+        .with_title("Horus")
+        .with_inner_size(winit::dpi::LogicalSize::new(700.0, 700.0))
+        .build(&event_loop).unwrap();
     let size = window.inner_size();
 
     // wgpu
