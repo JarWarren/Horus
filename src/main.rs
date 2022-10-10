@@ -155,7 +155,7 @@ async fn run() {
     });
 
     // uniform data to be sent to the shaders
-    let mut uniforms = Uniforms { mouse: [0., 0.], resolution: [size.width as _, size.height as _], time: 0., padding: 0. };
+    let mut uniforms = Uniforms { mouse: [0., 0.], resolution: [size.width.clone() as _, size.height.clone() as _], time: 0., padding: 0. };
     let time = Instant::now();
     let uniforms_buffer = device.create_buffer_init(&BufferInitDescriptor {
         label: None,
@@ -230,14 +230,14 @@ async fn run() {
                         ..
                     } => *control_flow = event_loop::ControlFlow::Exit,
                     WindowEvent::Resized(physical_size) => {
-                        resize(&device, &mut surface, &mut config, *physical_size, &mut uniforms);
+                        resize(&device, &mut surface, &mut config, (*physical_size).clone(), &mut uniforms);
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                        resize(&device, &mut surface, &mut config, **new_inner_size, &mut uniforms);
+                        resize(&device, &mut surface, &mut config, (**new_inner_size).clone(), &mut uniforms);
                     }
                     WindowEvent::CursorMoved { position, .. } => {
                         // update uniforms
-                        uniforms.mouse = [position.x as _, position.y as _];
+                        uniforms.mouse = [position.x.clone() as _, position.y.clone() as _];
                     }
                     _ => {}
                 }
@@ -286,7 +286,7 @@ fn resize(device: &Device, surface: &mut Surface, config: &mut SurfaceConfigurat
     if new_size.width > 0 && new_size.height > 0 {
         config.width = new_size.width;
         config.height = new_size.height;
-        uniforms.resolution = [new_size.width as _, new_size.height as _];
+        uniforms.resolution = [new_size.width.clone() as _, new_size.height.clone() as _];
         surface.configure(device, config);
     }
 }
