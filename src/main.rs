@@ -28,18 +28,17 @@ struct VertexInput {
 };
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
-    @location(0) coord: vec2<f32>,
 };
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
+    // a single triangle that covers the entire surface
     var vertices = array<vec2<f32>, 3>(
         vec2<f32>(-1., 1.),
-        vec2<f32>(3.0, 1.),
-        vec2<f32>(-1., -3.0),
+        vec2<f32>(3., 1.),
+        vec2<f32>(-1., -3.),
     );
     var out: VertexOutput;
-    out.coord = vertices[in.vertex_index];
-    out.position = vec4<f32>(out.coord, 0.0, 1.0);
+    out.position = vec4<f32>(vertices[in.vertex_index], 0.0, 1.0);
     return out;
 }\
 ";
@@ -47,7 +46,6 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 const FRAGMENT_SOURCE: &str = "\
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
-    @location(0) coord: vec2<f32>,
 };
 
 struct Uniforms {
