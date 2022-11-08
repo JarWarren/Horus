@@ -1,11 +1,9 @@
 use std::{
     env::args,
-    fs::read_to_string,
+    fs::{File, read_to_string},
+    io::Write,
     time::Instant,
 };
-use std::fs::File;
-use std::io::Write;
-
 use wgpu::{Backends, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType, BufferBindingType, BufferUsages, Color, CommandEncoderDescriptor, CompositeAlphaMode, Device, DeviceDescriptor, Features, FragmentState, Instance, Limits, LoadOp, MultisampleState, Operations, PipelineLayoutDescriptor, PowerPreference, PresentMode, PrimitiveState, RenderPassColorAttachment, RenderPassDescriptor, RenderPipelineDescriptor, RequestAdapterOptions, ShaderModuleDescriptor, ShaderSource, ShaderStages, Surface, SurfaceConfiguration, TextureUsages, TextureViewDescriptor, util::{BufferInitDescriptor, DeviceExt}, VertexState};
 use winit::{
     event::*,
@@ -38,7 +36,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
         vec2<f32>(-1., -3.),
     );
     var out: VertexOutput;
-    out.position = vec4<f32>(vertices[in.vertex_index], 0.0, 1.0);
+    out.position = vec4<f32>(vertices[in.vertex_index], 0., 1.);
     return out;
 }\
 ";
@@ -63,7 +61,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // `mouse` and `resolution` are in pixel coordinates
     // `time` is the number of seconds since program start
     let normalized = in.position.xy / uniforms.resolution;
-    return vec4<f32>(normalized.rg, 0., 1.0);
+    return vec4<f32>(normalized.rg, 0., 1.);
 }\
 ";
 
