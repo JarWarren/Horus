@@ -60,8 +60,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // Horus uses the same uniforms as thebookofshaders.com and shadertoy.com
     // `mouse` and `resolution` are in pixel coordinates
     // `time` is the number of seconds since program start
-    let normalized = in.position.xy / uniforms.resolution;
-    return vec4<f32>(normalized.rg, 0., 1.);
+    let rg = in.position.xy / uniforms.resolution;
+    return vec4<f32>(rg, 0., 1.);
 }\
 ";
 
