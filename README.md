@@ -5,7 +5,7 @@ and [Shader Toy](https://www.shadertoy.com)
 
 ## Installation
 
-- `git clone https://github.com/StymphalianEngine/Horus`
+- `git clone https://github.com/JarWarren/Horus`
 - `cd Horus`
 - `cargo install --path .`
 
